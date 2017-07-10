@@ -57,12 +57,17 @@ func main() {
 			qiitaPost.User.ID = "esa_bot"
 		}
 
-		println("Processing : " + qiitaPost.ID)
+		print("Processing : " + qiitaPost.ID + "...")
 		statusCode, body = esa.Create(qiitaPost).PostTeam(*esaTeamName, *esaToken)
 
 		if statusCode != http.StatusCreated {
+			println("")
+			println("-----------------------------------------------")
 			println(statusCode)
 			println(qiitaPost.ID + " : " + body)
+			println("-----------------------------------------------")
+		} else {
+			println(" Complete!")
 		}
 
 		time.Sleep(RequestInterval * time.Second)
