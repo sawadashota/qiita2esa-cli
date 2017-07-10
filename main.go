@@ -10,7 +10,7 @@ import (
 	"os"
 )
 
-const EsaRequestInterval = 10
+const EsaRequestInterval = 12
 const QiitaRequestInterval = 3.6
 
 func main() {
@@ -74,8 +74,9 @@ func main() {
 		if statusCode != http.StatusCreated {
 			println("")
 			println("-----------------------------------------------")
-			println(statusCode)
+			println("Status Code: " + strconv.Itoa(statusCode))
 			println(qiitaPost.ID + " : " + body)
+			println("See esa document: https://docs.esa.io/posts/102")
 			println("-----------------------------------------------")
 		} else {
 			println(" Complete!")
