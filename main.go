@@ -64,7 +64,7 @@ func main() {
 		if qiitaStatusCode != 200 {
 			println("-----------------------------------------------")
 			println("Qiita Status Code: " + strconv.Itoa(qiitaStatusCode))
-			println(strconv.Itoa(i-restartFrom) + " posts processed!")
+			println(strconv.Itoa(processID-restartFrom) + " posts processed!")
 			println("-----------------------------------------------")
 			break
 		}
