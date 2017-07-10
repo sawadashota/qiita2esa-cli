@@ -8,16 +8,20 @@ import (
 	"time"
 	"flag"
 	"os"
+	"math"
 )
 
 const EsaRequestInterval = 12
-const QiitaRequestInterval = 3.6
 
 func main() {
 	var (
-		statusCode int
+		qiitaStatusCode int
+		esaStatusCode int
 		body       string
+		qiitaPosts  []qiita.Post
 		qiitaPost  qiita.Post
+		key int
+		processID int
 	)
 
 	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
@@ -25,7 +29,7 @@ func main() {
 	qiitaToken := fs.String("qToken", "", "Qiita::Team Access Token")
 	esaTeamName := fs.String("e", "", "esa team name if not same Qiita::Team Name")
 	esaToken := fs.String("eToken", "", "esa Access Token")
-	startFrom := fs.String("start-from", "", "Skip until this Qiita::Team post ID")
+	restartFromStr := fs.String("restart-from", "1", "Restart from process ID")
 	fs.Parse(os.Args[1:])
 
 	if *qiitaTeamName == "" {
@@ -44,54 +48,66 @@ func main() {
 		esaTeamName = qiitaTeamName
 	}
 
-	passedStartFrom := *startFrom == ""
+	restartFrom, err := strconv.Atoi(*restartFromStr)
+	if err != nil {
+		panic("-restart-from should be integer.")
+	}
+
+	startingQiitaPage := postPage(restartFrom, qiita.QiitaPagePerPost)
 
 	esaMembers := esa.Members(*esaTeamName, *esaToken)
 
-	for i := 1; ; i++ {
-		statusCode, qiitaPost = qiita.GetPost(i, *qiitaTeamName, *qiitaToken)
+	for i := startingQiitaPage;; i++ {
 
-		if statusCode != 200 {
-			println(strconv.Itoa(i-1) + " posts processed!")
+		qiitaStatusCode, qiitaPosts = qiita.GetPosts(i, *qiitaTeamName, *qiitaToken)
+
+		if qiitaStatusCode != 200 {
+			println("-----------------------------------------------")
+			println("Qiita Status Code: " + strconv.Itoa(qiitaStatusCode))
+			println(strconv.Itoa(i-restartFrom) + " posts processed!")
+			println("-----------------------------------------------")
 			break
 		}
 
-		if !esa.ExistMember(esaMembers, qiitaPost.User.ID) {
-			qiitaPost.User.ID = "esa_bot"
+		for key, qiitaPost = range qiitaPosts {
+			processID = (qiita.QiitaPagePerPost * (i - 1)) + (key + 1)
+
+			if processID < restartFrom {
+				continue
+			}
+
+			if !esa.ExistMember(esaMembers, qiitaPost.User.ID) {
+				qiitaPost.User.ID = "esa_bot"
+			}
+
+			print(strconv.Itoa(processID) + ". Processing : " + qiitaPost.ID + " ...")
+
+			esaStatusCode, body = esa.Create(qiitaPost).PostTeam(*esaTeamName, *esaToken)
+
+			if esaStatusCode != http.StatusCreated {
+				println("")
+				println("-----------------------------------------------")
+				println("esa Status Code: " + strconv.Itoa(esaStatusCode))
+				println(qiitaPost.ID + " : " + body)
+				println("See esa document: https://docs.esa.io/posts/102")
+				println("-----------------------------------------------")
+			} else {
+				println(" Complete!")
+			}
+
+			time.Sleep(EsaRequestInterval * 1000 * time.Millisecond)
 		}
 
-		print("Processing : " + qiitaPost.ID + " ...")
-
-		passedStartFrom = shouldSkip(passedStartFrom, *startFrom, qiitaPost.ID)
-		if !passedStartFrom {
-			println(" Skipped")
-			time.Sleep(QiitaRequestInterval * 1000 * time.Millisecond)
-			continue
-		}
-
-		statusCode, body = esa.Create(qiitaPost).PostTeam(*esaTeamName, *esaToken)
-
-		if statusCode != http.StatusCreated {
-			println("")
+		if len(qiitaPosts) < qiita.QiitaPagePerPost {
 			println("-----------------------------------------------")
-			println("Status Code: " + strconv.Itoa(statusCode))
-			println(qiitaPost.ID + " : " + body)
-			println("See esa document: https://docs.esa.io/posts/102")
+			println(strconv.Itoa(processID-restartFrom) + " posts processed!")
 			println("-----------------------------------------------")
-		} else {
-			println(" Complete!")
+			break
 		}
-
-		time.Sleep(EsaRequestInterval * 1000 * time.Millisecond)
 	}
-
 }
 
-// esaへの投稿をスキップするかの判定
-func shouldSkip(passedStartFrom bool, startFrom string, qiitaPostId string) bool {
-	if passedStartFrom {
-		return passedStartFrom
-	}
-
-	return startFrom == qiitaPostId
+// Qiitaは何ページ目から読み込むか
+func postPage(processId int, pagePerPost int) int {
+	return int(math.Floor(float64((processId - 1) / pagePerPost))) + 1
 }

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"io/ioutil"
 )
 
 type Client struct {
@@ -13,7 +14,10 @@ type Client struct {
 	Params   url.Values
 }
 
-func GetPost(page int, teamName string, token string) (int, Post) {
+const QiitaPagePerPost   = 100
+
+
+func GetPosts(page int, teamName string, token string) (int, []Post) {
 	client := Client{TeamName: teamName, Token: token}
 	client.Endpoint = client.generateEndpoint("/api/v2/items")
 	client.Params = setValues(strconv.Itoa(page))
@@ -32,13 +36,13 @@ func (c Client) generateEndpoint(path string) url.URL {
 
 func setValues(page string) url.Values {
 	values := url.Values{}
-	values.Add("per_page", "1")
+	values.Add("per_page", strconv.Itoa(QiitaPagePerPost))
 	values.Add("page", page)
 
 	return values
 }
 
-func (c Client) request() (int, Post) {
+func (c Client) request() (int, []Post) {
 	req, _ := http.NewRequest("GET", c.Endpoint.String(), nil)
 	req.Header.Set("Authorization", "Bearer "+c.Token)
 	req.URL.RawQuery = c.Params.Encode()
@@ -52,10 +56,16 @@ func (c Client) request() (int, Post) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return resp.StatusCode, Post{}
+		messageBody, _ := ioutil.ReadAll(resp.Body)
+		println("***************** Response Body *****************")
+		println(string(messageBody))
+		println("You don't have article any more OR some errors occurred.")
+		println("*************************************************")
+
+		return resp.StatusCode, []Post{}
 	}
 
-	post := JsonParse(resp.Body)
+	posts := JsonParse(resp.Body)
 
-	return resp.StatusCode, post
+	return resp.StatusCode, posts
 }

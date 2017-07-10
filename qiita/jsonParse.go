@@ -36,7 +36,7 @@ type QiitaUser struct {
 	WebsiteURL        interface{} `json:"website_url"`
 }
 
-func JsonParse(jsonRaw io.ReadCloser) Post {
+func JsonParse(jsonRaw io.ReadCloser) []Post {
 	var posts []Post
 	json.NewDecoder(jsonRaw).Decode(&posts)
 
@@ -44,5 +44,5 @@ func JsonParse(jsonRaw io.ReadCloser) Post {
 		panic("Post should be array.")
 	}
 
-	return posts[0]
+	return posts
 }
