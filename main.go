@@ -1,14 +1,14 @@
 package main
 
 import (
-	"github.com/sawadashota/qiita-posts-go"
-	"strconv"
-	"qiita2esa-cli/esa"
-	"net/http"
-	"time"
 	"flag"
-	"os"
+	"github.com/sawadashota/qiita-posts-go"
 	"math"
+	"net/http"
+	"os"
+	"qiita2esa-cli/esa"
+	"strconv"
+	"time"
 )
 
 const EsaRequestInterval = 12
@@ -16,12 +16,12 @@ const EsaRequestInterval = 12
 func main() {
 	var (
 		qiitaStatusCode int
-		esaStatusCode int
-		body       string
-		qiitaPosts  []qiita.Post
-		qiitaPost  qiita.Post
-		key int
-		processID int
+		esaStatusCode   int
+		body            string
+		qiitaPosts      []qiita.Post
+		qiitaPost       qiita.Post
+		key             int
+		processID       int
 	)
 
 	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
@@ -53,13 +53,13 @@ func main() {
 		panic("-restart-from should be integer.")
 	}
 
-	startingQiitaPage := postPage(restartFrom, qiita.QiitaPagePerPost)
+	startingQiitaPage := postPage(restartFrom, qiita.PagePerPost)
 
 	esaMembers := esa.Members(*esaTeamName, *esaToken)
 
-	for i := startingQiitaPage;; i++ {
+	for i := startingQiitaPage; ; i++ {
 
-		qiitaStatusCode, qiitaPosts = qiita.GetPosts(i, *qiitaTeamName, *qiitaToken)
+		qiitaStatusCode, qiitaPosts = qiita.Posts(i, *qiitaTeamName, *qiitaToken).Get()
 
 		if qiitaStatusCode != 200 {
 			println("-----------------------------------------------")
@@ -69,7 +69,7 @@ func main() {
 		}
 
 		for key, qiitaPost = range qiitaPosts {
-			processID = (qiita.QiitaPagePerPost * (i - 1)) + (key + 1)
+			processID = (qiita.PagePerPost * (i - 1)) + (key + 1)
 
 			if processID < restartFrom {
 				continue
@@ -97,7 +97,7 @@ func main() {
 			time.Sleep(EsaRequestInterval * 1000 * time.Millisecond)
 		}
 
-		if len(qiitaPosts) < qiita.QiitaPagePerPost {
+		if len(qiitaPosts) < qiita.PagePerPost {
 			println("-----------------------------------------------")
 			println(strconv.Itoa(processID-restartFrom) + " posts processed!")
 			println("-----------------------------------------------")
@@ -108,5 +108,5 @@ func main() {
 
 // Qiitaは何ページ目から読み込むか
 func postPage(processId int, pagePerPost int) int {
-	return int(math.Floor(float64((processId - 1) / pagePerPost))) + 1
+	return int(math.Floor(float64((processId-1)/pagePerPost))) + 1
 }
