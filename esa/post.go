@@ -1,7 +1,7 @@
 package esa
 
 import (
-	"qiita2esa-cli/qiita"
+	"github.com/sawadashota/qiita-posts-go"
 	"net/url"
 	"bytes"
 	"encoding/json"

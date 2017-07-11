@@ -1,7 +1,7 @@
 package main
 
 import (
-	"qiita2esa-cli/qiita"
+	"github.com/sawadashota/qiita-posts-go"
 	"strconv"
 	"qiita2esa-cli/esa"
 	"net/http"
